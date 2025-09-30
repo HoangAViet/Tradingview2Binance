@@ -24,6 +24,34 @@ let signals = {
   D: null,
   E: null
 };
+//================
+// Cấu hình bot Telegram
+//================
+
+const axios = require('axios');
+
+// Hàm gửi thông báo Telegram
+async function sendTelegramMessage(message) {
+  
+    const TELEGRAM_BOT_TOKEN = "8234327138:AAE0sOglWD0wIVdwdPwtxo46w3y46K4vMm8"; // bot token
+    const CHAT_ID = "5628856618"; // chat_id 
+
+  const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
+
+  try {
+    await axios.post(url, {
+      chat_id: TELEGRAM_CHAT_ID,
+      text: message,
+    });
+    console.log("Đã gửi thông báo Telegram:", message);
+  } catch (error) {
+    console.error("Lỗi gửi Telegram:", error.response ? error.response.data : error.message);
+  }
+}
+
+// Ví dụ: gọi hàm này khi nhận tín hiệu hợp lệ
+// sendTelegramMessage("🚀 Nhận được tín hiệu MUA BTC/USDT!");
+
 
 // ==============================
 // 4. Endpoint để nhận webhook

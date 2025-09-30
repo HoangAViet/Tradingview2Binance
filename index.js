@@ -93,6 +93,7 @@ function checkConditions() {
     let diff = Math.abs(signals.A - signals.B); // chênh lệch thời gian (ms)
     if (diff < 60 * 1000) {
       console.log("🔥 Điều kiện A + B thoả mãn! Gửi thông báo ngay.");
+      sendTelegramMessage("🚀 Điều kiện thoả mãn: Tín hiệu A + B cùng lúc!");
       // Tại đây bạn có thể gọi API Telegram, Discord, Email, Binance...
       resetSignals(["A", "B"]); // reset lại để tránh trùng lặp
     }
@@ -104,6 +105,7 @@ function checkConditions() {
     let minTime = Math.min(signals.A, signals.B, signals.C);
     if (maxTime - minTime < 2 * 60 * 1000) {
       console.log("⚡ Điều kiện A + B + C thoả mãn!");
+      sendTelegramMessage("🚀 Điều kiện thoả mãn: A + B + C thoả mãn rồi, MÚC!");
       resetSignals(["A", "B", "C"]);
     }
   }

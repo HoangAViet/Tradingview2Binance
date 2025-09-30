@@ -40,7 +40,7 @@ async function sendTelegramMessage(message) {
 
   try {
     await axios.post(url, {
-      chat_id: TELEGRAM_CHAT_ID,
+      chat_id: CHAT_ID,
       text: message,
     });
     console.log("Đã gửi thông báo Telegram:", message);

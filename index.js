@@ -1,75 +1,110 @@
-import express from "express";
-import fetch from "node-fetch"; // nếu dùng Node >=18 bạn có thể dùng global fetch và bỏ dòng này
+// ==============================
+// 1. Import thư viện cần thiết
+// ==============================
+const express = require("express");   // Framework để tạo server
+const bodyParser = require("body-parser"); // Giúp đọc dữ liệu JSON từ request
 
+// ==============================
+// 2. Khởi tạo server
+// ==============================
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 3000; // Render sẽ tự gán PORT qua biến môi trường
 
-// Lưu trạng thái tín hiệu (in-memory)
+// Middleware: cho phép server đọc dữ liệu JSON gửi lên
+app.use(bodyParser.json());
+
+// ==============================
+// 3. Bộ nhớ tạm để lưu tín hiệu
+// ==============================
+// Mỗi khi TradingView gửi webhook, ta sẽ lưu tín hiệu lại trong object này
 let signals = {
   A: null,
   B: null,
+  C: null,
+  D: null,
+  E: null
 };
 
-const TTL_MS = 5 * 60 * 1000; // 5 phút
+// ==============================
+// 4. Endpoint để nhận webhook
+// ==============================
+// TradingView sẽ gửi POST request đến địa chỉ này
+// Ví dụ: https://ten-app.onrender.com/webhook
+app.post("/webhook", (req, res) => {
+  const data = req.body; // Dữ liệu JSON mà TradingView gửi sang
 
-function checkSignals() {
-  const now = Date.now();
-  if (
-    signals.A && (now - signals.A.ts) < TTL_MS &&
-    signals.B && (now - signals.B.ts) < TTL_MS
-  ) {
-    return true;
-  }
-  return false;
-}
+  // Giả sử TradingView gửi {"signal": "A"}
+  const signal = data.signal;
 
-async function sendTelegramMessage(text) {
-  const token = process.env.TELEGRAM_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId) {
-    console.log("Telegram not configured. Skipping send.");
-    return;
-  }
-  const url = `https://api.telegram.org/bot${token}/sendMessage`;
-  try {
-    await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text }),
-    });
-    console.log("Telegram sent");
-  } catch (e) {
-    console.error("Telegram send error:", e);
-  }
-}
-
-app.post("/webhook", async (req, res) => {
-  // Expect JSON like: { "signal":"A", "symbol":"BTCUSD", "price": 12345 }
-  const { signal, symbol, price } = req.body || {};
-  if (!signal) return res.status(400).send("No signal field");
-
-  const now = Date.now();
-  if (signal === "A" || signal === "B") {
-    signals[signal] = { ts: now, symbol: symbol || "?", price: price ?? "?" };
-    console.log(`Received ${signal}`, signals[signal]);
-  } else {
-    console.log("Unknown signal:", signal);
+  if (!signal) {
+    return res.status(400).send("Thiếu trường 'signal' trong JSON");
   }
 
-  if (checkSignals()) {
-    // build message with details
-    const msg = `✅ Condition met: A + B within 5m\nA: ${JSON.stringify(signals.A)}\nB: ${JSON.stringify(signals.B)}`;
-    console.log(msg);
-    await sendTelegramMessage(msg);
-    // reset after notifying
-    signals.A = null;
-    signals.B = null;
+  // Ghi log để debug
+  console.log("Nhận tín hiệu:", signal);
+
+  // Lưu tín hiệu vào bộ nhớ
+  if (signals.hasOwnProperty(signal)) {
+    signals[signal] = new Date(); // Ghi lại thời gian nhận được tín hiệu
   }
 
-  res.send("ok");
+  // Sau khi lưu tín hiệu, kiểm tra xem điều kiện có thoả mãn không
+  checkConditions();
+
+  // Trả lời TradingView để nó biết webhook thành công
+  res.json({ status: "ok", received: signal });
 });
 
-app.get("/", (req, res) => res.send("Webhook server up"));
+// ==============================
+// 5. Hàm kiểm tra điều kiện
+// ==============================
+// Ở đây bạn có thể custom logic riêng tuỳ ý
+function checkConditions() {
+  // Ví dụ: nếu tín hiệu A + B cùng có trong vòng 1 phút thì báo
+  if (signals.A && signals.B) {
+    let diff = Math.abs(signals.A - signals.B); // chênh lệch thời gian (ms)
+    if (diff < 60 * 1000) {
+      console.log("🔥 Điều kiện A + B thoả mãn! Gửi thông báo ngay.");
+      // Tại đây bạn có thể gọi API Telegram, Discord, Email, Binance...
+      resetSignals(["A", "B"]); // reset lại để tránh trùng lặp
+    }
+  }
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log("Listening on", port));
+  // Ví dụ khác: A + B + C đồng thời trong 2 phút
+  if (signals.A && signals.B && signals.C) {
+    let maxTime = Math.max(signals.A, signals.B, signals.C);
+    let minTime = Math.min(signals.A, signals.B, signals.C);
+    if (maxTime - minTime < 2 * 60 * 1000) {
+      console.log("⚡ Điều kiện A + B + C thoả mãn!");
+      resetSignals(["A", "B", "C"]);
+    }
+  }
+
+  // Ví dụ: nếu chỉ có tín hiệu E thì cũng báo riêng
+  if (signals.E) {
+    console.log("📢 Chỉ riêng tín hiệu E xuất hiện, báo ngay!");
+    resetSignals(["E"]);
+  }
+}
+
+// ==============================
+// 6. Hàm reset tín hiệu
+// ==============================
+// Sau khi xử lý xong 1 nhóm điều kiện, ta xoá tín hiệu đó đi
+function resetSignals(keys) {
+  keys.forEach(k => signals[k] = null);
+}
+
+// ==============================
+// 7. Endpoint test đơn giản
+// ==============================
+app.get("/", (req, res) => {
+  res.send("Webhook server đang chạy!");
+});
+
+// ==============================
+// 8. Khởi động server
+// ==============================
+app.listen(PORT, () => {
+  console.log(`Server đang chạy tại http://localhost:${PORT}`);
+});

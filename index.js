@@ -95,7 +95,7 @@ function checkConditions() {
       console.log("🔥 Điều kiện A + B thoả mãn! Gửi thông báo ngay.");
       sendTelegramMessage("🚀 Điều kiện thoả mãn: Tín hiệu A + B cùng lúc!");
       // Tại đây bạn có thể gọi API Telegram, Discord, Email, Binance...
-      resetSignals(["A", "B"]); // reset lại để tránh trùng lặp
+      // resetSignals(["A", "B"]); // reset lại để tránh trùng lặp
     }
   }
 

@@ -113,6 +113,7 @@ function checkConditions() {
   // Ví dụ: nếu chỉ có tín hiệu E thì cũng báo riêng
   if (signals.E) {
     console.log("📢 Chỉ riêng tín hiệu E xuất hiện, báo ngay!");
+    sendTelegramMessage("🚀 Tín hiệu E đã xuất hiện, CHẠY!");
     resetSignals(["E"]);
   }
 }
